@@ -1,0 +1,6 @@
+{
+  "name": "Web Music",
+  "description": "Modern music player web application with search, playlists, synced lyrics, and artist exploration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
