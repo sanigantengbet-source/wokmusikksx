@@ -1,6 +1,6 @@
 {
-  "name": "Web Music",
-  "description": "Modern music player web application with search, playlists, synced lyrics, and artist exploration.",
+  "name": "Musicfly",
+  "description": "A refined modern music player with fluid liquid glass aesthetics, real-time search, synced lyrics, and rich library management.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
