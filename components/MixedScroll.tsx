@@ -1,3 +1,6 @@
+'use client';
+
+import React, { memo } from 'react';
 import { Play, ArrowRight } from 'lucide-react';
 import { SmoothImage } from '@/components/SmoothImage';
 import { getHighResImage } from '@/lib/utils';
@@ -11,7 +14,7 @@ interface MixedScrollProps {
   items: any[];
 }
 
-export function MixedScroll({ title, items }: MixedScrollProps) {
+function MixedScrollComponent({ title, items }: MixedScrollProps) {
   const playTrack = usePlayerStore((state) => state.playTrack);
   const router = useRouter();
 
@@ -143,3 +146,5 @@ export function MixedScroll({ title, items }: MixedScrollProps) {
     </div>
   );
 }
+
+export const MixedScroll = memo(MixedScrollComponent);
