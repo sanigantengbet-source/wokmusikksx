@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { db, RecentSearch } from '@/lib/db';
 import { TrackItem } from '@/components/TrackItem';
 import { ArtistItem } from '@/components/ArtistItem';
-import { Search as SearchIcon, ArrowLeft, X, ArrowUpLeft, History, Sparkles, Compass, Flame } from 'lucide-react';
-import { motion, AnimatePresence, Variants } from 'motion/react';
+import { Search as SearchIcon, ArrowLeft, X, ArrowUpLeft, History, Flame, Compass } from 'lucide-react';
+import { motion, Variants } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { SearchSkeleton } from '@/components/SearchSkeleton';
 
@@ -14,7 +14,7 @@ const containerVariants: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.04,
       delayChildren: 0.02,
     },
   },
@@ -38,84 +38,153 @@ const POPULAR_SEARCH_TOPICS = [
   { name: 'Lagu Galau Indonesia', q: 'lagu galau sedih indonesia' },
 ];
 
+const SEARCH_TABS = ['Semua', 'Lagu', 'Video', 'Album', 'Artis', 'Daftar putar'] as const;
+
 export default function Search() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('Semua');
+  const [activeTab, setActiveTab] = useState<typeof SEARCH_TABS[number]>('Semua');
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
 
-  const tabs = ['Semua', 'Lagu', 'Video', 'Album', 'Artis', 'Daftar putar'];
+  // Abort controllers to prevent race conditions and memory leaks
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const suggestAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const loadRecentSearches = async () => {
-      const searches = await db.getRecentSearches();
-      setRecentSearches(searches);
-    };
-    loadRecentSearches();
-  }, []);
-
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (query.trim()) {
-        try {
-          const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`);
-          if (res.ok) {
-            const data = await res.json();
-            setSuggestions(Array.isArray(data) ? data : []);
-          } else {
-            setSuggestions([]);
-          }
-        } catch (error) {
-          console.error('Error fetching suggestions:', error);
-          setSuggestions([]);
+      try {
+        const searches = await db.getRecentSearches();
+        if (isMounted) {
+          setRecentSearches(searches);
         }
-      } else {
-        setSuggestions([]);
+      } catch (err) {
+        console.warn('Failed to load recent searches:', err);
       }
     };
-    
-    const debounceTimer = setTimeout(fetchSuggestions, 250);
-    return () => clearTimeout(debounceTimer);
+    loadRecentSearches();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Fetch Suggestions with debounce and abort controller
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (suggestAbortRef.current) {
+      suggestAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    suggestAbortRef.current = controller;
+
+    const debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(Array.isArray(data) ? data : []);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.warn('Error fetching suggestions:', error?.message || error);
+          setSuggestions([]);
+        }
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      controller.abort();
+    };
   }, [query]);
 
-  const handleSearch = async (searchQuery: string) => {
-    if (!searchQuery.trim()) return;
+  // Clean up all abort controllers on unmount
+  useEffect(() => {
+    return () => {
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      if (suggestAbortRef.current) suggestAbortRef.current.abort();
+    };
+  }, []);
+
+  const handleSearch = useCallback(async (searchQuery: string) => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+
+    if (searchAbortRef.current) {
+      searchAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setLoading(true);
     setIsFocused(false);
-    
-    // Save to recent searches
-    await db.addRecentSearch(searchQuery);
-    const searches = await db.getRecentSearches();
-    setRecentSearches(searches);
+
+    // Save to recent searches asynchronously
+    db.addRecentSearch(trimmed).then(() => {
+      db.getRecentSearches().then(setRecentSearches);
+    }).catch(() => {});
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+        signal: controller.signal,
+      });
       if (res.ok) {
         const data = await res.json();
         setResults(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.warn('Search query error:', error?.message || error);
+        setResults([]);
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleSearch(query);
   };
 
-  const handleRemoveRecentSearch = async (e: React.MouseEvent, queryToRemove: string) => {
+  const handleRemoveRecentSearch = useCallback(async (e: React.MouseEvent, queryToRemove: string) => {
     e.stopPropagation();
     await db.removeRecentSearch(queryToRemove);
     const searches = await db.getRecentSearches();
     setRecentSearches(searches);
-  };
+  }, []);
+
+  // Filtered results memoization
+  const filteredResults = useMemo(() => {
+    if (!results || results.length === 0) return [];
+    return results.filter((item) => {
+      if (activeTab === 'Semua') return true;
+      if (activeTab === 'Lagu') return item.type === 'SONG';
+      if (activeTab === 'Video') return item.type === 'VIDEO';
+      if (activeTab === 'Artis') return item.type === 'ARTIST';
+      if (activeTab === 'Album') return item.type === 'ALBUM';
+      if (activeTab === 'Daftar putar') return item.type === 'PLAYLIST';
+      return false;
+    });
+  }, [results, activeTab]);
+
+  const playableQueue = useMemo(() => {
+    return filteredResults.filter((r) => r.type !== 'ARTIST' && r.type !== 'PLAYLIST' && r.type !== 'ALBUM');
+  }, [filteredResults]);
 
   return (
     <main className="min-h-screen pt-4 pb-32 overflow-x-hidden">
@@ -154,7 +223,7 @@ export default function Search() {
 
       {/* Metrolist-style Category Tabs */}
       <div className="flex overflow-x-auto no-scrollbar gap-2 px-4 pr-12 mb-5 snap-x snap-mandatory scroll-smooth w-full">
-        {tabs.map((tab) => {
+        {SEARCH_TABS.map((tab) => {
           const isActive = activeTab === tab;
           return (
             <motion.button
@@ -191,7 +260,7 @@ export default function Search() {
             <div 
               key={index}
               className="flex items-center justify-between px-4 py-3 hover:bg-white/10 cursor-pointer transition-colors"
-              onClick={() => {
+              onMouseDown={() => {
                 setQuery(suggestion);
                 handleSearch(suggestion);
               }}
@@ -293,25 +362,19 @@ export default function Search() {
       <div className="px-4">
         {loading ? (
           <SearchSkeleton />
-        ) : results.length > 0 ? (
+        ) : filteredResults.length > 0 ? (
           <motion.div 
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="space-y-1 border-t border-white/10 pt-4"
           >
-            {results.filter(item => {
-              if (activeTab === 'Semua') return true;
-              if (activeTab === 'Lagu') return item.type === 'SONG';
-              if (activeTab === 'Video') return item.type === 'VIDEO';
-              if (activeTab === 'Artis') return item.type === 'ARTIST';
-              return false;
-            }).map((item, index) => (
-              <motion.div key={`${item.type}-${item.videoId || item.artistId}-${index}`} variants={itemVariants}>
+            {filteredResults.map((item, index) => (
+              <motion.div key={`${item.type}-${item.videoId || item.artistId || item.playlistId || item.albumId}-${index}`} variants={itemVariants}>
                 {item.type === 'ARTIST' ? (
                   <ArtistItem artist={item} />
                 ) : (
-                  <TrackItem track={item} queue={results.filter(r => r.type !== 'ARTIST')} />
+                  <TrackItem track={item} queue={playableQueue} />
                 )}
               </motion.div>
             ))}
