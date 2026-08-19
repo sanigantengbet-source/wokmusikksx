@@ -1,5 +1,6 @@
 'use client';
 
+import React, { memo } from 'react';
 import { Track, usePlayerStore } from '@/lib/store';
 import { SmoothImage } from '@/components/SmoothImage';
 import { getHighResImage } from '@/lib/utils';
@@ -8,7 +9,12 @@ import { motion } from 'motion/react';
 import { MarqueeText } from './MarqueeText';
 import { useRouter } from 'next/navigation';
 
-export function HorizontalScroll({ title, tracks }: { title: string; tracks: Track[] }) {
+interface HorizontalScrollProps {
+  title: string;
+  tracks: Track[];
+}
+
+function HorizontalScrollComponent({ title, tracks }: HorizontalScrollProps) {
   const playTrack = usePlayerStore((state) => state.playTrack);
   const router = useRouter();
 
@@ -101,3 +107,5 @@ export function HorizontalScroll({ title, tracks }: { title: string; tracks: Tra
     </div>
   );
 }
+
+export const HorizontalScroll = memo(HorizontalScrollComponent);
