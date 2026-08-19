@@ -1,5 +1,6 @@
 'use client';
 
+import React, { memo } from 'react';
 import { Track, usePlayerStore } from '@/lib/store';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { SmoothImage } from '@/components/SmoothImage';
@@ -7,15 +8,22 @@ import { getHighResImage } from '@/lib/utils';
 import { MarqueeText } from './MarqueeText';
 import { motion } from 'motion/react';
 
-export function TrackItem({ track, queue, onRemove }: { track: Track; queue?: Track[]; onRemove?: (track: Track) => void }) {
+interface TrackItemProps {
+  track: Track;
+  queue?: Track[];
+  onRemove?: (track: Track) => void;
+}
+
+function TrackItemComponent({ track, queue, onRemove }: TrackItemProps) {
   const playTrack = usePlayerStore((state) => state.playTrack);
-  const currentTrack = usePlayerStore((state) => state.currentTrack);
+  const isCurrent = usePlayerStore((state) => state.currentTrack?.videoId === track.videoId);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const setTrackToAdd = usePlayerStore((state) => state.setTrackToAdd);
-  const isCurrent = currentTrack?.videoId === track.videoId;
 
   const thumbnail = getHighResImage(track.thumbnails?.[track.thumbnails.length - 1]?.url, 200);
-  const artistName = Array.isArray(track.artist) ? track.artist.map(a => a.name).join(', ') : track.artist?.name || 'Unknown Artist';
+  const artistName = Array.isArray(track.artist) 
+    ? track.artist.map(a => a.name).join(', ') 
+    : track.artist?.name || 'Unknown Artist';
 
   return (
     <motion.div
@@ -82,3 +90,5 @@ export function TrackItem({ track, queue, onRemove }: { track: Track; queue?: Tr
     </motion.div>
   );
 }
+
+export const TrackItem = memo(TrackItemComponent);
