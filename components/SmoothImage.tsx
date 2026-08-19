@@ -28,13 +28,15 @@ export function SmoothImage({
       src={finalSrc}
       alt={alt || ''}
       fill={fill}
-      sizes={sizes}
+      sizes={sizes || '(max-width: 768px) 100vw, 300px'}
       priority={priority}
       referrerPolicy="no-referrer"
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
       onLoad={() => setIsLoaded(true)}
       onError={() => setHasError(true)}
-      className={`transition-all duration-700 ease-out ${
-        isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-sm scale-[1.03]'
+      className={`transition-opacity duration-300 ease-out will-change-[opacity] ${
+        isLoaded ? 'opacity-100' : 'opacity-0'
       } ${className}`}
       {...props}
     />
