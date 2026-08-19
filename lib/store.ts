@@ -50,6 +50,7 @@ interface PlayerState {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   setBackgroundPlayEnabled: (enabled: boolean) => void;
+  clearHistory: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -336,6 +337,7 @@ export const usePlayerStore = create<PlayerState>()(
         return { repeatMode: nextMode };
       }),
       setBackgroundPlayEnabled: (enabled) => set({ backgroundPlayEnabled: enabled }),
+      clearHistory: () => set({ history: [] }),
     }),
     {
       name: 'player-storage',
