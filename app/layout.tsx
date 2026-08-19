@@ -1,7 +1,8 @@
 import type {Metadata, Viewport} from 'next';
-import './globals.css'; // Global styles
+import './globals.css';
 import { BottomNav } from '@/components/BottomNav';
 import { Player } from '@/components/Player';
+import { DynamicIsland } from '@/components/DynamicIsland';
 import { AddToPlaylistModal } from '@/components/AddToPlaylistModal';
 import { PWARegister } from '@/components/PWARegister';
 import { BackgroundProvider } from '@/components/BackgroundProvider';
@@ -22,14 +23,20 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#0A0A0A',
+  colorScheme: 'dark',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en">
-      <body className="text-white antialiased pb-24 min-h-screen" suppressHydrationWarning>
+    <html lang="id" className="dark bg-[#0A0A0A] selection:bg-[#81B29A]/30">
+      <body className="text-white antialiased pb-24 min-h-screen bg-[#0A0A0A] overflow-x-hidden" suppressHydrationWarning>
         <BackgroundProvider />
         <PWARegister />
+        <DynamicIsland />
         {children}
         <Player />
         <BottomNav />
