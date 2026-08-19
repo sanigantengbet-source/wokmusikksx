@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error(`Lyrics error for id ${id}:`, error?.message || error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.warn(`Lyrics error for id ${id}:`, error?.message || error);
+    return NextResponse.json({ lyrics: null }, { status: 200 });
   }
 }
