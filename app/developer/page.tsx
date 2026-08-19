@@ -111,7 +111,7 @@ export default function DeveloperPage() {
             </div>
 
             <p className="text-white/60 text-xs sm:text-sm leading-relaxed max-w-sm">
-              Platform streaming musik modern gratis tanpa iklan. Nikmati jutaan lagu, buat daftar putar Anda sendiri, dan temukan musik baru setiap hari dengan kualitas audio premium tanpa batasan.
+              <strong className="text-white font-semibold">Musicfly</strong> adalah platform streaming musik modern gratis tanpa iklan. Nikmati jutaan lagu, buat daftar putar kustom, dan temukan musik baru setiap hari dengan visual liquid glass dan audio premium tanpa batasan.
             </p>
 
             {/* Social Links Grid */}
