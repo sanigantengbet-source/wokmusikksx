@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/db';
 import { usePlayerStore, Track } from '@/lib/store';
-import { Play, ArrowLeft, MoreHorizontal, Radio, Music, Trash2, BookmarkPlus, BookmarkCheck } from 'lucide-react';
+import { Play, ArrowLeft, Radio, Music, Trash2, BookmarkPlus, BookmarkCheck, Shuffle } from 'lucide-react';
 import { SmoothImage } from '@/components/SmoothImage';
 import { TrackItem } from '@/components/TrackItem';
 import { PlaylistSkeleton } from '@/components/PlaylistSkeleton';
 import { MarqueeText } from '@/components/MarqueeText';
 import { ConfirmModal } from '@/components/FeedbackModals';
+import { motion, Variants } from 'motion/react';
 
 interface Playlist {
   id: string;
@@ -17,6 +18,26 @@ interface Playlist {
   img: string;
   tracks: Track[];
 }
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', damping: 24, stiffness: 280 },
+  },
+};
 
 export default function PlaylistPage() {
   const params = useParams();
@@ -81,9 +102,14 @@ export default function PlaylistPage() {
 
   if (!playlist) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-white">
-        <p className="mb-4">Playlist tidak ditemukan</p>
-        <button onClick={() => router.back()} className="text-[#FA243C]">Kembali</button>
+      <div className="min-h-screen flex flex-col items-center justify-center text-white p-4 text-center">
+        <p className="font-bold text-lg mb-2">Playlist tidak ditemukan</p>
+        <button 
+          onClick={() => router.back()} 
+          className="mt-2 px-6 py-2.5 bg-white text-zinc-950 rounded-full font-bold text-xs hover:bg-zinc-100 transition-all shadow-lg"
+        >
+          Kembali
+        </button>
       </div>
     );
   }
@@ -91,6 +117,13 @@ export default function PlaylistPage() {
   const handlePlayAll = () => {
     if (playlist.tracks.length > 0) {
       playTrack(playlist.tracks[0], playlist.tracks, 'playlist');
+    }
+  };
+
+  const handleShuffle = () => {
+    if (playlist.tracks.length > 0) {
+      const shuffled = [...playlist.tracks].sort(() => Math.random() - 0.5);
+      playTrack(shuffled[0], shuffled, 'playlist');
     }
   };
 
@@ -117,11 +150,11 @@ export default function PlaylistPage() {
 
   const confirmRemoveSong = async () => {
     if (playlist && removeSongTarget) {
-        const updatedTracks = playlist.tracks.filter(t => t.videoId !== removeSongTarget.videoId);
-        const updatedPlaylist = { ...playlist, tracks: updatedTracks };
-        await db.addPlaylist(updatedPlaylist);
-        setPlaylist(updatedPlaylist);
-        setRemoveSongTarget(null);
+      const updatedTracks = playlist.tracks.filter(t => t.videoId !== removeSongTarget.videoId);
+      const updatedPlaylist = { ...playlist, tracks: updatedTracks };
+      await db.addPlaylist(updatedPlaylist);
+      setPlaylist(updatedPlaylist);
+      setRemoveSongTarget(null);
     }
   };
 
@@ -137,90 +170,138 @@ export default function PlaylistPage() {
   };
 
   const confirmSavePlaylist = async () => {
-      if (playlist) {
-        await db.deletePlaylist(playlist.id);
-        setIsSaved(false);
-      }
-      setSavePlaylistTarget(false);
+    if (playlist) {
+      await db.deletePlaylist(playlist.id);
+      setIsSaved(false);
+    }
+    setSavePlaylistTarget(false);
   };
 
   const isSelfCreated = /^\d+$/.test(playlist.id);
 
   return (
-    <main className="min-h-screen pb-32">
-      <div className="sticky top-0 z-10 bg-black/50 backdrop-blur-md px-4 py-4 flex items-center gap-4">
-        <button onClick={() => router.back()} className="w-10 h-10 rounded-full liquid-glass-icon flex items-center justify-center text-white hover:scale-105 transition-all">
+    <main className="min-h-screen pb-32 overflow-x-hidden">
+      {/* Sticky Glass Top Header */}
+      <div className="sticky top-0 z-10 bg-black/50 backdrop-blur-md px-4 py-4 flex items-center justify-between">
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.back()} 
+          className="w-10 h-10 rounded-full liquid-glass-icon flex items-center justify-center text-white shadow-md"
+        >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </motion.button>
+        <span className="text-xs font-bold uppercase tracking-wider text-white/50">Playlist</span>
+        <div className="w-10" />
       </div>
 
-      <div className="px-4 pt-4 pb-8 flex flex-col items-center text-center">
-        <div className="w-48 h-48 sm:w-64 sm:h-64 rounded-2xl overflow-hidden shadow-2xl mb-6 relative bg-white/5 flex items-center justify-center">
+      {/* Hero Header */}
+      <div className="px-4 pt-2 pb-6 flex flex-col items-center text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', damping: 24, stiffness: 260 }}
+          className="w-48 h-48 sm:w-60 sm:h-60 rounded-3xl overflow-hidden shadow-2xl mb-5 relative bg-white/5 flex items-center justify-center border border-white/10"
+        >
           {playlist.img ? (
             <SmoothImage src={playlist.img} alt={playlist.name} fill sizes="(max-width: 640px) 100vw, 300px" priority className="object-cover" />
           ) : (
             <Music className="w-20 h-20 text-white/20" />
           )}
+        </motion.div>
+        
+        <div className="w-full max-w-md mb-1.5">
+          <MarqueeText text={playlist.name} className="text-2xl sm:text-3xl font-black text-white text-center tracking-tight" />
         </div>
-        <div className="w-full max-w-sm mb-2">
-          <MarqueeText text={playlist.name} className="text-2xl sm:text-3xl font-bold text-white text-center" />
-        </div>
-        <p className="text-white/60 mb-6">{playlist.tracks.length} lagu</p>
+        <p className="text-white/60 text-xs sm:text-sm mb-6">{playlist.tracks.length} lagu di Musicfly</p>
 
-        <div className="flex items-center gap-4 w-full justify-center">
-          <button 
+        {/* Action Controls */}
+        <div className="flex items-center gap-3 w-full justify-center flex-wrap">
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handlePlayAll}
             disabled={playlist.tracks.length === 0}
-            className="w-14 h-14 liquid-glass-green rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-xl disabled:opacity-50"
+            className="h-12 px-6 bg-white text-zinc-950 rounded-full font-bold text-xs flex items-center justify-center gap-2 shadow-xl disabled:opacity-50"
             title="Putar Semua"
           >
-            <Play className="w-6 h-6 text-zinc-950 fill-current ml-0.5" />
-          </button>
-          <button 
+            <Play className="w-4 h-4 fill-current ml-0.5" />
+            <span>Putar Semua</span>
+          </motion.button>
+
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleShuffle}
+            disabled={playlist.tracks.length === 0}
+            className="w-12 h-12 rounded-full liquid-glass border border-white/15 flex items-center justify-center text-white disabled:opacity-50 shadow-md"
+            title="Acak Lagu"
+          >
+            <Shuffle className="w-4 h-4 text-white" />
+          </motion.button>
+
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleRadio}
             disabled={playlist.tracks.length === 0}
-            className="w-14 h-14 rounded-full liquid-glass-icon flex items-center justify-center hover:scale-105 transition-all text-white disabled:opacity-50"
+            className="w-12 h-12 rounded-full liquid-glass border border-white/15 flex items-center justify-center text-white disabled:opacity-50 shadow-md"
             title="Radio Playlist"
           >
-            <Radio className="w-5 h-5 text-white" />
-          </button>
+            <Radio className="w-4 h-4 text-[#81B29A]" />
+          </motion.button>
+
           {!isSelfCreated && (
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleSavePlaylist}
-              className="w-14 h-14 rounded-full liquid-glass-icon flex items-center justify-center hover:scale-105 transition-all text-white"
+              className="w-12 h-12 rounded-full liquid-glass border border-white/15 flex items-center justify-center text-white shadow-md"
               title={isSaved ? "Hapus dari Koleksi" : "Simpan ke Koleksi"}
             >
               {isSaved ? <BookmarkCheck className="w-5 h-5 text-[#81B29A]" /> : <BookmarkPlus className="w-5 h-5 text-white" />}
-            </button>
+            </motion.button>
           )}
+
           {isSelfCreated && isSaved && (
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleDeletePlaylist}
-              className="w-14 h-14 rounded-full liquid-glass-icon flex items-center justify-center hover:scale-105 transition-all text-white hover:text-red-400"
+              className="w-12 h-12 rounded-full liquid-glass border border-white/15 flex items-center justify-center text-white hover:text-red-400 shadow-md"
               title="Hapus Playlist"
             >
-              <Trash2 className="w-5 h-5" />
-            </button>
+              <Trash2 className="w-4 h-4" />
+            </motion.button>
           )}
         </div>
       </div>
 
+      {/* Tracks List with Spring Animations */}
       <div className="px-4 max-w-3xl mx-auto">
         {playlist.tracks.length === 0 ? (
-          <div className="text-center text-white/50 py-12">
-            Belum ada lagu di playlist ini.
+          <div className="text-center text-white/50 py-12 rounded-2xl liquid-glass-subtle border border-dashed border-white/10 p-6">
+            <Music className="w-10 h-10 text-white/20 mx-auto mb-2" />
+            <p className="font-bold text-white text-sm">Belum ada lagu di playlist ini</p>
+            <p className="text-xs text-white/50 mt-1">Cari lagu dan ketuk tombol menu untuk menambahkannya ke sini.</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="space-y-1 border-t border-white/10 pt-4"
+          >
             {playlist.tracks.map((track, index) => (
-              <TrackItem 
-                key={`${track.videoId}-${index}`} 
-                track={track} 
-                queue={playlist.tracks} 
-                onRemove={isSelfCreated ? handleRemoveSong : undefined}
-              />
+              <motion.div key={`${track.videoId}-${index}`} variants={itemVariants}>
+                <TrackItem 
+                  track={track} 
+                  queue={playlist.tracks} 
+                  onRemove={isSelfCreated ? handleRemoveSong : undefined}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
