@@ -1,17 +1,23 @@
 'use client';
 
 import Image from 'next/image';
-import { ArrowLeft, Globe, Instagram, Twitter, Coffee, Download, Tv, CheckCircle2, Radio, BatteryCharging, Sparkles, Sliders } from 'lucide-react';
+import { ArrowLeft, Globe, Instagram, Twitter, Coffee, Download, Tv, CheckCircle2, Radio, BatteryCharging, Sparkles, Sliders, Moon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { usePlayerStore } from '@/lib/store';
+import { SleepTimerModal } from '@/components/SleepTimerModal';
+import { useState } from 'react';
 
 export default function DeveloperPage() {
   const router = useRouter();
   const { installPWA } = usePWAInstall();
   const backgroundPlayEnabled = usePlayerStore((state) => state.backgroundPlayEnabled);
   const setBackgroundPlayEnabled = usePlayerStore((state) => state.setBackgroundPlayEnabled);
+  const sleepTimerTarget = usePlayerStore((state) => state.sleepTimerTarget);
+  const sleepTimerEndOfTrack = usePlayerStore((state) => state.sleepTimerEndOfTrack);
+  const clearSleepTimer = usePlayerStore((state) => state.clearSleepTimer);
+  const [showSleepTimerModal, setShowSleepTimerModal] = useState(false);
 
   return (
     <main className="min-h-screen pb-32">
@@ -60,7 +66,7 @@ export default function DeveloperPage() {
                 onClick={() => setBackgroundPlayEnabled(!backgroundPlayEnabled)}
                 className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full p-1 transition-colors duration-300 ease-in-out focus:outline-none ${
                   backgroundPlayEnabled 
-                    ? 'bg-[#81B29A] shadow-[0_0_15px_rgba(129,178,154,0.5)]' 
+                    ? 'bg-[#81B29A] shadow-md' 
                     : 'bg-white/15'
                 }`}
               >
@@ -75,6 +81,56 @@ export default function DeveloperPage() {
             <div className="pt-3 border-t border-white/5 flex items-center gap-2 text-[11px] text-white/50">
               <Sparkles className="w-3.5 h-3.5 text-[#81B29A] shrink-0" />
               <span>Didukung oleh MediaSession API dan background audio engine.</span>
+            </div>
+          </div>
+
+          {/* Sleep Timer Setting Card */}
+          <div className="liquid-glass rounded-3xl p-5 border border-white/10 shadow-xl space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3.5">
+                <div className="w-11 h-11 rounded-2xl liquid-glass-icon flex items-center justify-center text-[#81B29A] shrink-0 mt-0.5">
+                  <Moon className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">Timer Tidur (Sleep Timer)</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${(sleepTimerTarget || sleepTimerEndOfTrack) ? 'bg-[#81B29A]/20 text-[#81B29A] border border-[#81B29A]/30' : 'bg-white/10 text-white/50 border border-white/10'}`}>
+                      {(sleepTimerTarget || sleepTimerEndOfTrack) ? 'Aktif' : 'Mati'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/60 leading-relaxed">
+                    Hentikan musik secara otomatis setelah durasi tertentu atau saat lagu yang sedang diputar selesai.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowSleepTimerModal(true)}
+                className="px-3.5 py-1.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition-all shrink-0 self-center"
+              >
+                {(sleepTimerTarget || sleepTimerEndOfTrack) ? 'Ubah' : 'Atur'}
+              </button>
+            </div>
+          </div>
+
+          {/* Dynamic Island Feature Card */}
+          <div className="liquid-glass rounded-3xl p-5 border border-white/10 shadow-xl space-y-3">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl liquid-glass-icon flex items-center justify-center text-white shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-[#81B29A]" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">Dynamic Island Pop-Up</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-[#81B29A]/20 text-[#81B29A] border border-[#81B29A]/30">
+                    Aktif
+                  </span>
+                </div>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Pill interaktif melayang di bagian atas layar bergaya Dynamic Island iPhone. Ketuk untuk memperluas kontrol instan, putar/jeda, ganti lagu, dan atur durasi.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -169,6 +225,12 @@ export default function DeveloperPage() {
           67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
         }
       `}</style>
+
+      {/* Sleep Timer Modal */}
+      <SleepTimerModal
+        isOpen={showSleepTimerModal}
+        onClose={() => setShowSleepTimerModal(false)}
+      />
     </main>
   );
 }
