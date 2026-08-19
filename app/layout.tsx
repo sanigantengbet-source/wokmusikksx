@@ -7,13 +7,13 @@ import { PWARegister } from '@/components/PWARegister';
 import { BackgroundProvider } from '@/components/BackgroundProvider';
 
 export const metadata: Metadata = {
-  title: 'Music App',
-  description: 'Platform streaming musik modern',
+  title: 'Musicfly',
+  description: 'Musicfly - Modern Liquid Glass Music Streaming Platform',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'Music App',
+    statusBarStyle: 'black-translucent',
+    title: 'Musicfly',
   },
   icons: {
     apple: 'https://f.top4top.io/p_3733w0g4e0.jpg',
