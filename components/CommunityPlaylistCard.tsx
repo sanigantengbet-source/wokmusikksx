@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Play, Plus, Radio, Check, PlusSquare } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect, memo } from 'react';
+import { Play, Radio, Check, PlusSquare } from 'lucide-react';
 import { SmoothImage } from '@/components/SmoothImage';
 import { useRouter } from 'next/navigation';
 import { usePlayerStore, Track } from '@/lib/store';
@@ -13,7 +15,7 @@ interface PlaylistData {
   videos: Track[];
 }
 
-export function CommunityPlaylistCard({ playlistId }: { playlistId: string }) {
+function CommunityPlaylistCardComponent({ playlistId }: { playlistId: string }) {
   const [playlist, setPlaylist] = useState<PlaylistData | null>(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
@@ -21,9 +23,13 @@ export function CommunityPlaylistCard({ playlistId }: { playlistId: string }) {
   const playTrack = usePlayerStore((state) => state.playTrack);
 
   useEffect(() => {
+    const controller = new AbortController();
+    
     const fetchPlaylist = async () => {
       try {
-        const res = await fetch(`/api/ytplaylist?id=${encodeURIComponent(playlistId)}`);
+        const res = await fetch(`/api/ytplaylist?id=${encodeURIComponent(playlistId)}`, {
+          signal: controller.signal
+        });
         if (!res.ok) {
           setPlaylist(null);
           return;
@@ -40,14 +46,21 @@ export function CommunityPlaylistCard({ playlistId }: { playlistId: string }) {
           ...data,
           videos
         });
-      } catch (error) {
-        console.error('Failed to fetch playlist:', error);
-        setPlaylist(null);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.warn('Failed to fetch community playlist:', error?.message || error);
+          setPlaylist(null);
+        }
       } finally {
         setLoading(false);
       }
     };
+    
     fetchPlaylist();
+
+    return () => {
+      controller.abort();
+    };
   }, [playlistId]);
 
   if (loading) {
@@ -110,7 +123,6 @@ export function CommunityPlaylistCard({ playlistId }: { playlistId: string }) {
 
   const handleRadio = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Start radio based on the first track
     if (playlist.videos && playlist.videos.length > 0) {
       playTrack(playlist.videos[0], [], 'similar');
     }
@@ -208,3 +220,5 @@ export function CommunityPlaylistCard({ playlistId }: { playlistId: string }) {
     </div>
   );
 }
+
+export const CommunityPlaylistCard = memo(CommunityPlaylistCardComponent);
