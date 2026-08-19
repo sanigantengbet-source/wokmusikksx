@@ -17,47 +17,48 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-safe pt-1 pointer-events-none">
-      <div className="max-w-md mx-auto mb-2 rounded-3xl liquid-glass px-2 py-1 pointer-events-auto shadow-2xl backdrop-blur-2xl border border-white/10">
-        <div className="flex items-center justify-between h-14 relative">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
+    <nav className="fixed bottom-0 left-0 right-0 z-40 w-full bg-[#0A0E0C]/90 backdrop-blur-2xl border-t border-white/10 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      <div className="max-w-md mx-auto flex items-center justify-around h-16 px-2">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                'flex flex-col items-center justify-center flex-1 h-full py-1 transition-all duration-200 relative group select-none'
+              )}
+            >
+              {/* Icon Container with Metrolist-style active pill */}
+              <div className="relative flex items-center justify-center w-16 h-8 rounded-full transition-colors">
+                {isActive && (
+                  <motion.div
+                    layoutId="metrolistActiveIndicator"
+                    className="absolute inset-0 bg-white rounded-full shadow-sm"
+                    transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+                  />
+                )}
+                <item.icon
+                  className={cn(
+                    'w-5 h-5 relative z-10 transition-all duration-200',
+                    isActive ? 'text-zinc-950 stroke-[2.5] scale-105' : 'text-white/65 group-hover:text-white group-hover:scale-110'
+                  )}
+                />
+              </div>
+
+              {/* Label */}
+              <span
                 className={cn(
-                  'flex flex-col items-center justify-center flex-1 min-w-0 h-full py-0.5 transition-all duration-200 relative group'
+                  'text-[11px] tracking-tight transition-all duration-200 mt-1 truncate',
+                  isActive ? 'font-black text-white' : 'font-medium text-white/55 group-hover:text-white/80'
                 )}
               >
-                <div className="relative flex items-center justify-center px-4 py-1 rounded-full">
-                  {isActive && (
-                    <motion.div
-                      layoutId="bottomNavIndicator"
-                      className="absolute inset-0 bg-white rounded-full shadow-md shadow-white/10"
-                      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                    />
-                  )}
-                  <item.icon
-                    className={cn(
-                      'w-4.5 h-4.5 relative z-10 transition-transform group-hover:scale-110',
-                      isActive ? 'text-zinc-950 stroke-[2.5]' : 'text-white/70'
-                    )}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    'text-[10px] tracking-tight transition-all truncate mt-0.5 relative z-10',
-                    isActive ? 'font-bold text-white' : 'font-medium text-white/60'
-                  )}
-                >
-                  {item.name}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+                {item.name}
+              </span>
+            </Link>
+          );
+        })}
       </div>
-    </div>
+    </nav>
   );
 }
