@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getYTMusic } from '@/lib/ytmusic';
+import { getYTMusic, safeSearchSongs, safeSearchVideos } from '@/lib/ytmusic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,10 +17,11 @@ export async function GET(request: Request) {
       console.warn(`ytmusic.getArtist failed for id ${id} (e.g. ZodError), attempting fallback search...`, e?.name || e?.message);
     }
     
-    // If getArtist succeeded, fix any carousel bugs
+    // If getArtist succeeded, ensure topVideos are populated and fix carousels
     if (artist) {
+      // Clean up featuredOn / livePerformances if misassigned by ytmusic-api
       if (artist.featuredOn && artist.featuredOn.length > 0 && artist.featuredOn[0].playlistId === artist.artistId) {
-        const videos = artist.featuredOn.map((item: any) => {
+        const liveVids = artist.featuredOn.map((item: any) => {
           let videoId = item.playlistId;
           if (item.thumbnails && item.thumbnails.length > 0) {
             const match = item.thumbnails[0].url.match(/\/vi\/([a-zA-Z0-9-_]{11})\//);
@@ -47,7 +48,19 @@ export async function GET(request: Request) {
           artist.featuredOn = [];
         }
         
-        (artist as any).livePerformances = videos;
+        (artist as any).livePerformances = liveVids;
+      }
+
+      // Ensure artist has topVideos (Music Videos / Live)
+      if (!artist.topVideos || artist.topVideos.length === 0) {
+        try {
+          const vids = await safeSearchVideos(`${artist.name} official video`);
+          if (Array.isArray(vids) && vids.length > 0) {
+            artist.topVideos = vids.slice(0, 12);
+          }
+        } catch {
+          // ignore
+        }
       }
       
       return NextResponse.json(artist, {
@@ -58,9 +71,9 @@ export async function GET(request: Request) {
     }
 
     // Fallback when ytmusic.getArtist fails (e.g. ZodError or schema change):
-    // Search songs by artist ID or name to construct a working artist profile
     let fallbackSongs: any[] = [];
     let fallbackAlbums: any[] = [];
+    let fallbackVideos: any[] = [];
     let artistName = id;
     let thumbnails: any[] = [];
 
@@ -74,7 +87,8 @@ export async function GET(request: Request) {
         }
       }
 
-      fallbackSongs = await ytmusic.searchSongs(artistName).catch(() => []);
+      fallbackSongs = await safeSearchSongs(artistName);
+      fallbackVideos = await safeSearchVideos(`${artistName} official video`);
       
       if (fallbackSongs.length > 0 && (!thumbnails || thumbnails.length === 0)) {
         const first = fallbackSongs[0];
@@ -92,6 +106,7 @@ export async function GET(request: Request) {
       topSongs: fallbackSongs.slice(0, 20),
       topAlbums: fallbackAlbums,
       topSingles: [],
+      topVideos: fallbackVideos.slice(0, 12),
       similarArtists: []
     };
 
@@ -101,7 +116,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error(`Artist route unhandled error for id ${id}:`, error?.message || error);
+    console.warn(`Artist route error for id ${id}:`, error?.message || error);
     return NextResponse.json({
       artistId: id,
       name: 'Artis',
@@ -109,6 +124,7 @@ export async function GET(request: Request) {
       topSongs: [],
       topAlbums: [],
       topSingles: [],
+      topVideos: [],
       similarArtists: []
     }, { status: 200 });
   }
